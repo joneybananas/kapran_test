@@ -1,30 +1,62 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kapran_test/api/api_service.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-import 'package:kapran_test/main.dart';
+import 'package:kapran_test/data/table_dto.dart';
+
+@GenerateMocks([http.Client])
+import 'widget_test.mocks.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('ApiService', () {
+    late MockClient mockClient;
+    late ApiService apiService;
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    setUp(() {
+      mockClient = MockClient();
+      apiService =
+          ApiService(baseUrl: 'https://example.com', client: mockClient);
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('fetchPriceData returns PriceData on success', () async {
+      // Подготавливаем мок-ответ
+      final mockResponse = {
+        'genealogy': {
+          'item1': {'key': 'value1'},
+          'item2': {'key': 'value2'},
+        },
+        'genetics': {
+          'item3': {'key': 'value3'},
+        },
+        'premium': {
+          'item4': {'key': 'value4'},
+        },
+        'diagnostic': {
+          'item5': {'key': 'value5'},
+        },
+      };
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      when(mockClient.get(Uri.parse('https://example.com'))).thenAnswer(
+          (_) async => http.Response(jsonEncode(mockResponse), 200));
+
+      // Выполняем тестируемый метод
+      final priceData = await apiService.fetchPriceData();
+
+      // Проверяем результат
+      expect(priceData.genealogy['item1']?['key'], equals('value1'));
+      expect(priceData.genetics['item3']?['key'], equals('value3'));
+      expect(priceData.premium['item4']?['key'], equals('value4'));
+      expect(priceData.diagnostic['item5']?['key'], equals('value5'));
+    });
+
+    test('fetchPriceData throws an exception on error', () async {
+      when(mockClient.get(Uri.parse('https://example.com')))
+          .thenAnswer((_) async => http.Response('Not Found', 404));
+
+      expect(apiService.fetchPriceData(), throwsException);
+    });
   });
 }
