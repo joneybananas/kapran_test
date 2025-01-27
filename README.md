@@ -2,7 +2,7 @@
 
 перед запуском ввести 
 Flutter pub get
-
+flutter pub run build_runner build  
 
 
 Примечания:
